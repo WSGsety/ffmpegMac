@@ -1,0 +1,15 @@
+{
+  "name": "ffmpeg-mac-shell",
+  "version": "0.1.0",
+  "description": "A macOS desktop FFmpeg shell with a visual UI.",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "^31.0.2"
+  }
+}
