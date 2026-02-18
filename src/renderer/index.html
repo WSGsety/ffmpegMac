@@ -69,29 +69,8 @@
           </label>
         </div>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>CRF（可选）</span>
-            <input id="crf" type="number" min="0" max="51" step="1" placeholder="例如 23" />
-          </label>
-
-          <label class="field">
-            <span>编码速度（可选）</span>
-            <select id="speedPreset">
-              <option value="">自动</option>
-              <option value="ultrafast">ultrafast</option>
-              <option value="superfast">superfast</option>
-              <option value="veryfast">veryfast</option>
-              <option value="faster">faster</option>
-              <option value="fast">fast</option>
-              <option value="medium">medium</option>
-              <option value="slow">slow</option>
-              <option value="slower">slower</option>
-              <option value="veryslow">veryslow</option>
-            </select>
-          </label>
-
-          <label class="field checkbox-field">
+        <div class="basic-toggle-row">
+          <label class="field checkbox-field basic-toggle">
             <input id="overwrite" type="checkbox" checked />
             <span>覆盖输出文件（-y）</span>
           </label>
@@ -107,132 +86,172 @@
         <h2>高级设置</h2>
         <p class="hint">留空表示不传该参数。可按需覆盖模板默认值。</p>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>视频编码器（可选）</span>
-            <select id="videoCodec">
-              <option value="">自动</option>
-              <option value="libx264">libx264</option>
-              <option value="libx265">libx265</option>
-              <option value="libvpx-vp9">libvpx-vp9</option>
-              <option value="copy">copy</option>
-              <option value="none">禁用视频</option>
-            </select>
-          </label>
+        <div class="setting-groups">
+          <details class="setting-group" open>
+            <summary>编码策略</summary>
+            <div class="setting-group-body">
+              <div class="grid-3">
+                <label class="field">
+                  <span>视频编码器（可选）</span>
+                  <select id="videoCodec">
+                    <option value="">自动</option>
+                    <option value="libx264">libx264</option>
+                    <option value="libx265">libx265</option>
+                    <option value="libvpx-vp9">libvpx-vp9</option>
+                    <option value="copy">copy</option>
+                    <option value="none">禁用视频</option>
+                  </select>
+                </label>
 
-          <label class="field">
-            <span>音频编码器（可选）</span>
-            <select id="audioCodec">
-              <option value="">自动</option>
-              <option value="aac">aac</option>
-              <option value="libmp3lame">libmp3lame</option>
-              <option value="copy">copy</option>
-              <option value="none">禁用音频</option>
-            </select>
-          </label>
+                <label class="field">
+                  <span>音频编码器（可选）</span>
+                  <select id="audioCodec">
+                    <option value="">自动</option>
+                    <option value="aac">aac</option>
+                    <option value="libmp3lame">libmp3lame</option>
+                    <option value="copy">copy</option>
+                    <option value="none">禁用音频</option>
+                  </select>
+                </label>
 
-          <label class="field">
-            <span>像素格式（可选）</span>
-            <input id="pixelFormat" type="text" placeholder="例如 yuv420p" />
-          </label>
-        </div>
+                <label class="field">
+                  <span>编码速度（可选）</span>
+                  <select id="speedPreset">
+                    <option value="">自动</option>
+                    <option value="ultrafast">ultrafast</option>
+                    <option value="superfast">superfast</option>
+                    <option value="veryfast">veryfast</option>
+                    <option value="faster">faster</option>
+                    <option value="fast">fast</option>
+                    <option value="medium">medium</option>
+                    <option value="slow">slow</option>
+                    <option value="slower">slower</option>
+                    <option value="veryslow">veryslow</option>
+                  </select>
+                </label>
+              </div>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>视频码率（可选）</span>
-            <input id="videoBitrate" type="text" placeholder="例如 2M" />
-          </label>
+              <div class="grid-3">
+                <label class="field">
+                  <span>CRF（可选）</span>
+                  <input id="crf" type="number" min="0" max="51" step="1" placeholder="例如 23" />
+                </label>
 
-          <label class="field">
-            <span>音频码率（可选）</span>
-            <input id="audioBitrate" type="text" placeholder="例如 192k" />
-          </label>
+                <label class="field">
+                  <span>视频码率（可选）</span>
+                  <input id="videoBitrate" type="text" placeholder="例如 2M" />
+                </label>
 
-          <label class="field">
-            <span>音频质量 Q（可选）</span>
-            <input id="audioQuality" type="text" placeholder="例如 2" />
-          </label>
-        </div>
+                <label class="field">
+                  <span>音频码率（可选）</span>
+                  <input id="audioBitrate" type="text" placeholder="例如 192k" />
+                </label>
+              </div>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>帧率 FPS（可选）</span>
-            <input id="fps" type="number" min="1" max="240" step="1" placeholder="例如 24" />
-          </label>
+              <div class="grid-3">
+                <label class="field">
+                  <span>音频质量 Q（可选）</span>
+                  <input id="audioQuality" type="text" placeholder="例如 2" />
+                </label>
+              </div>
+            </div>
+          </details>
 
-          <label class="field">
-            <span>缩放宽度（可选）</span>
-            <input id="width" type="number" min="1" step="1" placeholder="例如 1280" />
-          </label>
+          <details class="setting-group" open>
+            <summary>画面与音频处理</summary>
+            <div class="setting-group-body">
+              <div class="grid-3">
+                <label class="field">
+                  <span>帧率 FPS（可选）</span>
+                  <input id="fps" type="number" min="1" max="240" step="1" placeholder="例如 24" />
+                </label>
 
-          <label class="field">
-            <span>缩放高度（可选）</span>
-            <input id="height" type="number" min="1" step="1" placeholder="例如 720" />
-          </label>
-        </div>
+                <label class="field">
+                  <span>缩放宽度（可选）</span>
+                  <input id="width" type="number" min="1" step="1" placeholder="例如 1280" />
+                </label>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>采样率（可选）</span>
-            <input id="sampleRate" type="number" min="8000" step="1" placeholder="例如 44100" />
-          </label>
+                <label class="field">
+                  <span>缩放高度（可选）</span>
+                  <input id="height" type="number" min="1" step="1" placeholder="例如 720" />
+                </label>
+              </div>
 
-          <label class="field">
-            <span>声道数（可选）</span>
-            <input id="channels" type="number" min="1" max="8" step="1" placeholder="例如 2" />
-          </label>
+              <div class="grid-3">
+                <label class="field">
+                  <span>像素格式（可选）</span>
+                  <input id="pixelFormat" type="text" placeholder="例如 yuv420p" />
+                </label>
 
-          <label class="field">
-            <span>线程数（可选）</span>
-            <input id="threads" type="number" min="1" max="64" step="1" placeholder="例如 4" />
-          </label>
-        </div>
+                <label class="field">
+                  <span>采样率（可选）</span>
+                  <input id="sampleRate" type="number" min="8000" step="1" placeholder="例如 44100" />
+                </label>
 
-        <div class="grid-3">
-          <label class="field">
-            <span>输出格式（可选）</span>
-            <input id="format" type="text" placeholder="例如 mp4 / webm" />
-          </label>
+                <label class="field">
+                  <span>声道数（可选）</span>
+                  <input id="channels" type="number" min="1" max="8" step="1" placeholder="例如 2" />
+                </label>
+              </div>
 
-          <label class="field">
-            <span>流映射（可选）</span>
-            <input id="map" type="text" placeholder="例如 0:v:0" />
-          </label>
+              <label class="field">
+                <span>附加视频滤镜（可选）</span>
+                <input id="videoFilter" type="text" placeholder="例如 eq=contrast=1.1:saturation=1.2" />
+              </label>
+            </div>
+          </details>
 
-          <label class="field">
-            <span>循环参数（可选）</span>
-            <input id="loop" type="text" placeholder="例如 0（GIF 无限循环）" />
-          </label>
-        </div>
+          <details class="setting-group" open>
+            <summary>封装与执行控制</summary>
+            <div class="setting-group-body">
+              <div class="grid-3">
+                <label class="field">
+                  <span>输出格式（可选）</span>
+                  <input id="format" type="text" placeholder="例如 mp4 / webm" />
+                </label>
 
-        <label class="field">
-          <span>附加视频滤镜（可选）</span>
-          <input id="videoFilter" type="text" placeholder="例如 eq=contrast=1.1:saturation=1.2" />
-        </label>
+                <label class="field">
+                  <span>流映射（可选）</span>
+                  <input id="map" type="text" placeholder="例如 0:v:0" />
+                </label>
 
-        <div class="grid-3 compact-checkboxes">
-          <label class="field checkbox-field">
-            <input id="movflagsFaststart" type="checkbox" />
-            <span>启用 +faststart</span>
-          </label>
+                <label class="field">
+                  <span>循环参数（可选）</span>
+                  <input id="loop" type="text" placeholder="例如 0（GIF 无限循环）" />
+                </label>
+              </div>
 
-          <label class="field checkbox-field">
-            <input id="disableVideo" type="checkbox" />
-            <span>强制禁用视频（-vn）</span>
-          </label>
+              <div class="grid-2 compact-checkboxes">
+                <label class="field">
+                  <span>线程数（可选）</span>
+                  <input id="threads" type="number" min="1" max="64" step="1" placeholder="例如 4" />
+                </label>
 
-          <label class="field checkbox-field">
-            <input id="disableAudio" type="checkbox" />
-            <span>强制禁用音频（-an）</span>
-          </label>
-        </div>
+                <label class="field checkbox-field">
+                  <input id="movflagsFaststart" type="checkbox" />
+                  <span>启用 +faststart</span>
+                </label>
 
-        <div class="extra-args" aria-label="extra-args">
-          <div class="extra-head">
-            <span>额外参数（可视化添加）</span>
-            <button id="addExtraArg" class="btn btn-ghost" type="button">添加参数</button>
-          </div>
-          <div id="extraArgsRows" class="extra-rows"></div>
+                <label class="field checkbox-field">
+                  <input id="disableVideo" type="checkbox" />
+                  <span>强制禁用视频（-vn）</span>
+                </label>
+
+                <label class="field checkbox-field">
+                  <input id="disableAudio" type="checkbox" />
+                  <span>强制禁用音频（-an）</span>
+                </label>
+              </div>
+
+              <div class="extra-args" aria-label="extra-args">
+                <div class="extra-head">
+                  <span>额外参数（可视化添加）</span>
+                  <button id="addExtraArg" class="btn btn-ghost" type="button">添加参数</button>
+                </div>
+                <div id="extraArgsRows" class="extra-rows"></div>
+              </div>
+            </div>
+          </details>
         </div>
       </section>
 

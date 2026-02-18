@@ -176,6 +176,17 @@ textarea:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.basic-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.15rem;
+}
+
+.basic-toggle {
+  width: min(360px, 100%);
+  margin-bottom: 0;
+}
+
 .checkbox-field {
   display: flex;
   align-items: center;
@@ -203,6 +214,39 @@ textarea:focus {
 
 .compact-checkboxes .field {
   margin-bottom: 0;
+}
+
+.setting-groups {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.setting-group {
+  border: 1px solid rgba(23, 36, 38, 0.18);
+  border-radius: 12px;
+  background: rgba(247, 244, 238, 0.78);
+  overflow: hidden;
+}
+
+.setting-group summary {
+  cursor: pointer;
+  user-select: none;
+  color: #22484c;
+  font-weight: 700;
+  padding: 0.72rem 0.85rem;
+  background: rgba(235, 229, 220, 0.56);
+}
+
+.setting-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.setting-group[open] summary {
+  border-bottom: 1px solid rgba(23, 36, 38, 0.14);
+}
+
+.setting-group-body {
+  padding: 0.82rem 0.85rem 0.2rem;
 }
 
 .hint {
@@ -473,5 +517,9 @@ textarea:focus {
 
   .extra-row {
     grid-template-columns: 1fr;
+  }
+
+  .basic-toggle {
+    width: 100%;
   }
 }
