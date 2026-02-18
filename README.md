@@ -1,125 +1,131 @@
-# FFmpeg 图形工具（macOS）
+# FFmpeg 图形工具
 
-基于 Electron 的 FFmpeg 桌面可视化工具。  
-目标是把常见转码工作流做成“默认可用 + 高级可调”：
+基于 **Tauri + Rust** 的跨平台 FFmpeg 桌面应用（macOS / Windows / Linux）。
 
-- 基础流程区：常用场景、输入输出、裁剪时间、直接执行
-- 模块高级区：视频模块、音频模块、封装与执行模块
-- 命令预览区：实时看到最终生成的 ffmpeg 命令
+目标：
+- 基础流程可直接用（输入输出、裁剪、预设）
+- 高级参数按模块展开（视频 / 音频 / 封装执行）
+- 全程可视化，实时命令预览、日志、进度和浮层提示
 
 ## 功能概览
 
-- 一键选择输入文件 / 输出文件（系统对话框）
-- 媒体探测（`ffprobe`）：容器、时长、码率、流信息
-- 4 个转码模板：
-  - `H.264 MP4（均衡）`
-  - `H.265 MP4（更小体积）`
-  - `提取 MP3 音频`
-  - `转为 GIF`
-- 3 个常用快速场景（一键套用默认参数）：
-  - `社媒竖屏`
-  - `压缩归档`
-  - `只导出音频`
-- 全部参数均为可选，留空即不传该参数
-- 实时命令预览、执行进度、日志输出
-- 顶部浮层提示（进行中 / 成功 / 失败）
+- 输入文件 / 输出文件原生系统对话框选择
+- 内置 `ffprobe` 媒体探测（容器、时长、码率、流信息）
+- 转码模板：`H.264` / `H.265` / `MP3` / `GIF`
+- 常用一键场景：`社媒竖屏` / `压缩归档` / `只导出音频`
+- 所有参数可选，留空即不传
+- 实时命令预览 + 实时日志 + 进度条 + 状态提示
 
 ## 环境要求
 
-- macOS
 - Node.js 18+
-- 已安装 `ffmpeg` 和 `ffprobe`
+- Rust stable（`cargo` / `rustc`）
+- 已安装 `ffmpeg` 与 `ffprobe`
 
-推荐安装方式（Homebrew）：
+macOS 推荐：
 
 ```bash
 brew install ffmpeg
 ```
 
-## 快速开始
+## 本地开发
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 使用流程（对应页面分组）
+这会启动 Tauri 桌面窗口（不是浏览器标签页）。
 
-1. 在“基础流程设置”里先点一个常用快速场景（可选）
-2. 选择输入文件与输出文件
-3. 按需填写起始时间、时长
-4. 如需更细控制，再展开“模块高级设置”
-5. 在“命令预览”确认最终命令
-6. 点击“开始执行”
+## 本地打包
 
-## 参数分组说明
+### macOS
 
-### 基础流程设置
+```bash
+npm run dist:mac
+```
 
-- 快速场景：一键覆盖常用参数组合
-- 输入/输出：文件路径选择
-- 时间裁切：`-ss`、`-t`
-- 基础开关：覆盖输出（`-y`）
-- 环境路径：可选填写 `ffmpeg` / `ffprobe` 的完整路径
+产物在 `release/` 目录：
 
-### 模块高级设置
+- `FFmpeg_GUI_Tool_<version>_<arch>.dmg`
+- `FFmpeg_GUI_Tool_<version>_<arch>.zip`
 
-- 视频模块：编码器、`CRF`、码率、帧率、分辨率、像素格式、滤镜
-- 音频模块：编码器、码率、`Q`、采样率、声道
-- 封装与执行模块：输出格式、流映射、循环、线程、`+faststart`、额外参数
+`dist:mac` 内部流程是：
+1. 先用 Tauri 生成 `.app`
+2. 再用 `hdiutil` 生成简化版 `.dmg`
 
-## 常见问题
+### 通用构建（当前系统）
 
-### 1) 选文件按钮没反应，或报 `pickInput` 相关错误
+```bash
+npm run dist
+```
 
-- 先完全退出应用后重启（确保加载了最新 `preload.cjs`）
-- 确认在项目根目录启动：`npm run dev`
-- 如果你刚更新过代码，建议重新启动一次 Electron 进程
-
-### 2) 点“探测”时报 `spawn ffprobe ENOENT`
-
-表示系统找不到 `ffprobe`。处理方式：
-
-1. 安装 FFmpeg：`brew install ffmpeg`
-2. 或在界面“环境与工具路径”里填写完整路径  
-   例如 `/opt/homebrew/bin/ffprobe`
-
-### 3) 从哪里看报错信息？
-
-- 页面顶部浮层提示（最直接）
-- “实时进度”中的状态文本
-- 底部 “FFmpeg 日志” 面板（详细 stderr 输出）
-- 启动应用的终端窗口（主进程错误）
-
-### 4) 输入超长文件名后界面变形
-
-新版本已对长路径和长命令做换行防溢出处理。若仍有问题，请带截图与输入样例反馈。
-
-## 开发与测试
-
-运行测试：
+## 测试
 
 ```bash
 npm test
 ```
 
-测试包含：
+包含：
+- Node 测试（UI 结构、前端桥接、样式、参数逻辑）
+- Rust 测试（命令分词、输出路径建议、进度解析）
 
-- 命令参数构建（预设 / 可视化）
-- 进度解析
-- 可执行文件路径解析与报错提示
-- 预加载桥接、布局防溢出、浮层反馈、流程分组结构
+## GitHub Release 三平台安装包
+
+仓库已包含工作流：
+
+- `.github/workflows/release.yml`
+
+触发方式：
+- 在 GitHub 创建并发布 Release（`published`）
+
+工作流会自动：
+- 在 macOS / Windows / Linux 三个平台构建 Tauri 安装包
+- 将构建产物上传到当前 Release
+
+说明：
+- Release 页面自带源码压缩包（Source code zip/tar.gz）
+- 工作流上传的是三平台安装包/可执行产物
+
+## 使用流程
+
+1. 在“基础流程设置”选择快速场景（可选）
+2. 选择输入文件和输出文件
+3. 设置起始时间 / 时长（可选）
+4. 需要精细控制时，展开“模块高级设置”
+5. 查看“命令预览”后执行
+
+## 常见问题
+
+### 1) 探测报 `ENOENT`（找不到 ffprobe）
+
+- 先安装 FFmpeg（含 ffprobe）
+- 或在界面里填写 `ffprobe` 完整路径（例如 `/opt/homebrew/bin/ffprobe`）
+
+### 2) 从哪里看错误
+
+- 顶部浮层提示
+- 实时进度状态
+- FFmpeg 日志面板
+- 启动应用的终端输出
 
 ## 项目结构
 
 ```text
 src/
-  core/job.js          # ffmpeg 参数构建、进度解析、路径解析、命令预览格式化
-  main/main.js         # Electron 主进程、IPC、ffmpeg/ffprobe 调用
-  main/preload.cjs     # 渲染进程安全桥接 API
-  renderer/index.html  # UI 结构
-  renderer/styles.css  # 样式
-  renderer/renderer.js # 交互逻辑（参数收集、预览、提示、状态）
+  renderer/index.html     # UI 结构
+  renderer/styles.css     # UI 样式
+  renderer/renderer.js    # 页面交互逻辑
+  renderer/tauri-bridge.js# 前端到 Tauri 命令桥接
+  core/job.js             # JS 侧命令逻辑与测试基准
+src-tauri/
+  src/main.rs             # Rust 后端命令、ffmpeg 执行、事件推送
+  tauri.conf.json         # Tauri 应用与打包配置
+  Cargo.toml              # Rust 依赖
+.github/workflows/
+  release.yml             # GitHub Release 三平台自动构建
+scripts/
+  build-macos-bundles.sh  # 本地 macOS app/dmg/zip 打包脚本
 test/
-  *.test.js            # 核心逻辑与页面结构测试
+  *.test.js               # Node 测试
 ```

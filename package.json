@@ -1,15 +1,20 @@
 {
   "name": "ffmpeg-mac-shell",
-  "version": "0.1.0",
-  "description": "A macOS desktop FFmpeg shell with a visual UI.",
+  "version": "0.2.0",
+  "description": "A cross-platform FFmpeg desktop app powered by Tauri + Rust.",
   "type": "module",
-  "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron .",
-    "test": "node --test"
+    "dev": "node ./scripts/run-tauri.mjs dev",
+    "build": "node ./scripts/run-tauri.mjs build --bundles app",
+    "dist": "node ./scripts/run-tauri.mjs build --bundles app",
+    "dist:mac": "bash ./scripts/build-macos-bundles.sh",
+    "dist:mac:app": "node ./scripts/run-tauri.mjs build --bundles app",
+    "dist:mac:dir": "node ./scripts/run-tauri.mjs build --bundles app",
+    "test:js": "node --test",
+    "test:rust": "node ./scripts/run-rust-tests.mjs",
+    "test": "npm run test:js && npm run test:rust"
   },
   "devDependencies": {
-    "electron": "^31.0.2"
+    "@tauri-apps/cli": "^2.0.0"
   }
 }

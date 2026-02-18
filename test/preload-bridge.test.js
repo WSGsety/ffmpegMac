@@ -2,15 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-test('main window points to CommonJS preload bridge file', () => {
-  const mainJs = fs.readFileSync(new URL('../src/main/main.js', import.meta.url), 'utf8');
-  assert.match(mainJs, /preload:\s*path\.join\(__dirname,\s*'preload\.cjs'\)/);
+test('renderer includes tauri bridge bootstrap script', () => {
+  const html = fs.readFileSync(new URL('../src/renderer/index.html', import.meta.url), 'utf8');
+  assert.match(html, /src="\.\/tauri-bridge\.js"/);
+  assert.match(html, /src="\.\/renderer\.js"/);
 });
 
-test('preload bridge exports ffmpegShell API using CommonJS', () => {
-  const preloadCjs = fs.readFileSync(new URL('../src/main/preload.cjs', import.meta.url), 'utf8');
-  assert.match(preloadCjs, /const\s+\{\s*contextBridge,\s*ipcRenderer\s*\}\s*=\s*require\('electron'\)/);
-  assert.match(preloadCjs, /contextBridge\.exposeInMainWorld\('ffmpegShell'/);
-  assert.match(preloadCjs, /pickInput:\s*\(\)\s*=>/);
-  assert.match(preloadCjs, /pickOutput:\s*\(payload\)\s*=>/);
+test('tauri bridge exposes ffmpegShell API with invoke and event bindings', () => {
+  const bridge = fs.readFileSync(new URL('../src/renderer/tauri-bridge.js', import.meta.url), 'utf8');
+  assert.match(bridge, /window\.ffmpegShell\s*=\s*\{/);
+  assert.match(bridge, /pickInput:\s*\(\)\s*=>\s*invokeCommand\('pick_input'\)/);
+  assert.match(bridge, /run:\s*\(payload\)\s*=>\s*invokeCommand\('run_ffmpeg',\s*payload\)/);
+  assert.match(bridge, /onProgress:\s*\(callback\)\s*=>\s*bindEvent\('ffmpeg:progress',\s*callback\)/);
+});
+
+test('tauri config enables global api and static renderer dist', () => {
+  const configPath = new URL('../src-tauri/tauri.conf.json', import.meta.url);
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.equal(config?.app?.withGlobalTauri, true);
+  assert.equal(config?.build?.frontendDist, '../src/renderer');
 });
