@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildFfmpegArgs, parseProgress, splitCommandLine, suggestOutputPath } from '../src/core/job.js';
+import {
+  buildFfmpegArgs,
+  formatCommandPreview,
+  parseProgress,
+  splitCommandLine,
+  suggestOutputPath
+} from '../src/core/job.js';
 
 test('buildFfmpegArgs for h264 preset', () => {
   const args = buildFfmpegArgs({
@@ -139,6 +145,66 @@ test('buildFfmpegArgs raw mode validates required placeholder inputs', () => {
       }),
     /inputPath is required/
   );
+});
+
+test('buildFfmpegArgs supports visual mode with optional advanced args', () => {
+  const args = buildFfmpegArgs({
+    mode: 'visual',
+    preset: 'h265',
+    inputPath: '/tmp/input source.mov',
+    outputPath: '/tmp/output file.mp4',
+    startTime: '3',
+    duration: '12',
+    crf: 26,
+    speedPreset: 'slow',
+    fps: 24,
+    scaleWidth: 1280,
+    pixelFormat: 'yuv420p',
+    movflagsFaststart: true,
+    threads: 4,
+    extraArgs: [
+      { key: '-metadata', value: 'title=Sample Clip' },
+      { key: '-map', value: '0:v:0' }
+    ]
+  });
+
+  assert.deepEqual(args, [
+    '-y',
+    '-ss',
+    '3',
+    '-t',
+    '12',
+    '-i',
+    '/tmp/input source.mov',
+    '-c:v',
+    'libx265',
+    '-preset',
+    'slow',
+    '-crf',
+    '26',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '160k',
+    '-vf',
+    'fps=24,scale=1280:-1:flags=lanczos',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    '-threads',
+    '4',
+    '-metadata',
+    'title=Sample Clip',
+    '-map',
+    '0:v:0',
+    '/tmp/output file.mp4'
+  ]);
+});
+
+test('formatCommandPreview quotes arguments with spaces', () => {
+  const text = formatCommandPreview('ffmpeg', ['-i', '/tmp/in file.mov', '-c:v', 'libx264', '/tmp/out file.mp4']);
+  assert.equal(text, 'ffmpeg -i "/tmp/in file.mov" -c:v libx264 "/tmp/out file.mp4"');
 });
 
 test('suggestOutputPath chooses extension and avoids collisions', () => {

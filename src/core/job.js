@@ -10,6 +10,36 @@ const PRESET_OUTPUT_EXT = {
   gif: '.gif'
 };
 
+const VISUAL_PRESET_DEFAULTS = {
+  h264: {
+    videoCodec: 'libx264',
+    speedPreset: 'medium',
+    crf: 23,
+    audioCodec: 'aac',
+    audioBitrate: '192k'
+  },
+  h265: {
+    videoCodec: 'libx265',
+    speedPreset: 'medium',
+    crf: 28,
+    audioCodec: 'aac',
+    audioBitrate: '160k'
+  },
+  mp3: {
+    disableVideo: true,
+    audioCodec: 'libmp3lame',
+    audioQuality: '2'
+  },
+  gif: {
+    disableAudio: true,
+    fps: 12,
+    scaleWidth: 480,
+    loop: '0'
+  }
+};
+
+const SAFE_PREVIEW_ARG_RE = /^[A-Za-z0-9_./:=+,-]+$/;
+
 function pushTrimArgs(args, startTime, duration) {
   if (startTime) {
     args.push('-ss', String(startTime));
@@ -90,6 +120,48 @@ function buildPresetArgs(job) {
 
   args.push(outputPath);
   return args;
+}
+
+function hasValue(value) {
+  if (value === undefined || value === null) {
+    return false;
+  }
+
+  return String(value).trim() !== '';
+}
+
+function textValue(value) {
+  if (!hasValue(value)) {
+    return '';
+  }
+
+  return String(value).trim();
+}
+
+function numberValue(value) {
+  if (!hasValue(value)) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pushOptionIfValue(args, key, value) {
+  const text = textValue(value);
+  if (!text) {
+    return;
+  }
+
+  args.push(key, text);
+}
+
+function roundPositiveNumberOrNull(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  return Math.round(value);
 }
 
 export function splitCommandLine(commandLine) {
@@ -179,10 +251,174 @@ function buildRawArgs(job) {
   });
 }
 
+function buildVisualArgs(job) {
+  const inputPath = textValue(job.inputPath);
+  const outputPath = textValue(job.outputPath);
+
+  if (!inputPath || !outputPath) {
+    throw new Error('inputPath and outputPath are required');
+  }
+
+  const preset = textValue(job.preset) || 'h264';
+  const defaults = VISUAL_PRESET_DEFAULTS[preset] ?? VISUAL_PRESET_DEFAULTS.h264;
+  const args = [];
+
+  if (job.overwrite !== false) {
+    args.push('-y');
+  }
+
+  pushTrimArgs(args, textValue(job.startTime), textValue(job.duration));
+  args.push('-i', inputPath);
+
+  const disableVideo = Boolean(job.disableVideo) || Boolean(defaults.disableVideo);
+  const disableAudio = Boolean(job.disableAudio) || Boolean(defaults.disableAudio);
+
+  const videoCodec = textValue(job.videoCodec) || textValue(defaults.videoCodec);
+  const audioCodec = textValue(job.audioCodec) || textValue(defaults.audioCodec);
+
+  if (disableVideo || videoCodec === 'none') {
+    args.push('-vn');
+  } else {
+    if (videoCodec && videoCodec !== 'auto') {
+      args.push('-c:v', videoCodec);
+    }
+
+    const speedPreset = textValue(job.speedPreset) || textValue(defaults.speedPreset);
+    if (speedPreset && videoCodec !== 'copy') {
+      args.push('-preset', speedPreset);
+    }
+
+    const crf = numberValue(job.crf);
+    const defaultCrf = numberValue(defaults.crf);
+    const finalCrf = crf ?? defaultCrf;
+    if (Number.isFinite(finalCrf) && videoCodec !== 'copy') {
+      args.push('-crf', String(finalCrf));
+    }
+
+    pushOptionIfValue(args, '-b:v', job.videoBitrate);
+  }
+
+  if (disableAudio || audioCodec === 'none') {
+    args.push('-an');
+  } else {
+    if (audioCodec && audioCodec !== 'auto') {
+      args.push('-c:a', audioCodec);
+    }
+
+    const audioBitrate = textValue(job.audioBitrate) || textValue(defaults.audioBitrate);
+    if (audioBitrate) {
+      args.push('-b:a', audioBitrate);
+    }
+
+    const audioQuality = textValue(job.audioQuality) || textValue(defaults.audioQuality);
+    if (audioQuality) {
+      args.push('-q:a', audioQuality);
+    }
+
+    const sampleRate = roundPositiveNumberOrNull(numberValue(job.sampleRate));
+    if (sampleRate) {
+      args.push('-ar', String(sampleRate));
+    }
+
+    const channels = roundPositiveNumberOrNull(numberValue(job.channels));
+    if (channels) {
+      args.push('-ac', String(channels));
+    }
+  }
+
+  const filters = [];
+  const fps = numberValue(job.fps) ?? numberValue(defaults.fps);
+  if (Number.isFinite(fps) && fps > 0) {
+    filters.push(`fps=${fps}`);
+  }
+
+  const scaleWidth = numberValue(job.scaleWidth) ?? numberValue(defaults.scaleWidth);
+  const scaleHeight = numberValue(job.scaleHeight) ?? numberValue(defaults.scaleHeight);
+  if (Number.isFinite(scaleWidth) || Number.isFinite(scaleHeight)) {
+    const width = Number.isFinite(scaleWidth) ? Math.round(scaleWidth) : -1;
+    const height = Number.isFinite(scaleHeight) ? Math.round(scaleHeight) : -1;
+    filters.push(`scale=${width}:${height}:flags=lanczos`);
+  }
+
+  const customVideoFilter = textValue(job.videoFilter);
+  if (customVideoFilter) {
+    filters.push(customVideoFilter);
+  }
+
+  if (filters.length > 0) {
+    args.push('-vf', filters.join(','));
+  }
+
+  const loop = hasValue(job.loop) ? textValue(job.loop) : textValue(defaults.loop);
+  if (loop) {
+    args.push('-loop', loop);
+  }
+
+  pushOptionIfValue(args, '-pix_fmt', job.pixelFormat);
+
+  if (job.movflagsFaststart) {
+    args.push('-movflags', '+faststart');
+  }
+
+  const threads = roundPositiveNumberOrNull(numberValue(job.threads));
+  if (threads) {
+    args.push('-threads', String(threads));
+  }
+
+  pushOptionIfValue(args, '-f', job.format);
+  pushOptionIfValue(args, '-map', job.map);
+
+  if (Array.isArray(job.extraArgs)) {
+    for (const option of job.extraArgs) {
+      if (!option || option.enabled === false) {
+        continue;
+      }
+
+      const keyRaw = textValue(option.key);
+      if (!keyRaw) {
+        continue;
+      }
+
+      const key = keyRaw.startsWith('-') ? keyRaw : `-${keyRaw}`;
+      args.push(key);
+
+      const value = textValue(option.value);
+      if (value) {
+        args.push(value);
+      }
+    }
+  }
+
+  args.push(outputPath);
+  return args;
+}
+
+function quoteCommandArg(value) {
+  const text = String(value ?? '');
+  if (text.length === 0) {
+    return '""';
+  }
+
+  if (SAFE_PREVIEW_ARG_RE.test(text)) {
+    return text;
+  }
+
+  return `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
+export function formatCommandPreview(binaryPath, args) {
+  const command = [textValue(binaryPath) || 'ffmpeg', ...(Array.isArray(args) ? args : [])];
+  return command.map((arg) => quoteCommandArg(arg)).join(' ');
+}
+
 export function buildFfmpegArgs(job) {
-  const mode = job?.mode === 'raw' ? 'raw' : 'preset';
+  const mode = job?.mode === 'raw' ? 'raw' : job?.mode === 'visual' ? 'visual' : 'preset';
   if (mode === 'raw') {
     return buildRawArgs(job ?? {});
+  }
+
+  if (mode === 'visual') {
+    return buildVisualArgs(job ?? {});
   }
 
   return buildPresetArgs(job ?? {});
