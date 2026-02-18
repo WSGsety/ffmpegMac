@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   buildFfmpegArgs,
+  formatSpawnError,
   formatCommandPreview,
   parseProgress,
+  resolveExecutablePath,
   splitCommandLine,
   suggestOutputPath
 } from '../src/core/job.js';
@@ -205,6 +207,31 @@ test('buildFfmpegArgs supports visual mode with optional advanced args', () => {
 test('formatCommandPreview quotes arguments with spaces', () => {
   const text = formatCommandPreview('ffmpeg', ['-i', '/tmp/in file.mov', '-c:v', 'libx264', '/tmp/out file.mp4']);
   assert.equal(text, 'ffmpeg -i "/tmp/in file.mov" -c:v libx264 "/tmp/out file.mp4"');
+});
+
+test('resolveExecutablePath falls back to common Homebrew paths', () => {
+  const resolved = resolveExecutablePath('ffprobe', 'ffprobe', (candidate) => {
+    return candidate === '/opt/homebrew/bin/ffprobe';
+  });
+
+  assert.equal(resolved, '/opt/homebrew/bin/ffprobe');
+});
+
+test('resolveExecutablePath keeps explicit custom path as-is', () => {
+  const resolved = resolveExecutablePath('/custom/bin/ffprobe', 'ffprobe', () => false);
+  assert.equal(resolved, '/custom/bin/ffprobe');
+});
+
+test('formatSpawnError gives actionable hint for missing ffprobe binary', () => {
+  const message = formatSpawnError(
+    { code: 'ENOENT', message: 'spawn ffprobe ENOENT' },
+    'ffprobe',
+    'ffprobe'
+  );
+
+  assert.match(message, /未找到 ffprobe 可执行文件/);
+  assert.match(message, /brew install ffmpeg/);
+  assert.match(message, /\/opt\/homebrew\/bin\/ffprobe/);
 });
 
 test('suggestOutputPath chooses extension and avoids collisions', () => {

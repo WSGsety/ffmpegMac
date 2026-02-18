@@ -10,6 +10,11 @@ const PRESET_OUTPUT_EXT = {
   gif: '.gif'
 };
 
+const COMMON_EXECUTABLE_PATHS = {
+  ffmpeg: ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'],
+  ffprobe: ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe']
+};
+
 const VISUAL_PRESET_DEFAULTS = {
   h264: {
     videoCodec: 'libx264',
@@ -409,6 +414,41 @@ function quoteCommandArg(value) {
 export function formatCommandPreview(binaryPath, args) {
   const command = [textValue(binaryPath) || 'ffmpeg', ...(Array.isArray(args) ? args : [])];
   return command.map((arg) => quoteCommandArg(arg)).join(' ');
+}
+
+export function resolveExecutablePath(rawPath, toolName, pathExists = () => false) {
+  const fallbackName = toolName === 'ffprobe' ? 'ffprobe' : 'ffmpeg';
+  const configured = textValue(rawPath) || fallbackName;
+  const explicitPath = configured.includes('/') || configured.startsWith('.');
+  if (explicitPath) {
+    return configured;
+  }
+
+  const candidates = COMMON_EXECUTABLE_PATHS[fallbackName] ?? [];
+  for (const candidate of candidates) {
+    if (pathExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return configured;
+}
+
+export function formatSpawnError(error, toolName, configuredPath = '') {
+  const name = toolName === 'ffprobe' ? 'ffprobe' : 'ffmpeg';
+
+  if (error?.code === 'ENOENT') {
+    return [
+      `未找到 ${name} 可执行文件。`,
+      '请先安装 FFmpeg（brew install ffmpeg），',
+      `或在界面里填写 ${name} 的完整路径（例如 /opt/homebrew/bin/${name}）。`,
+      configuredPath ? `当前配置：${configuredPath}` : ''
+    ]
+      .filter(Boolean)
+      .join('');
+  }
+
+  return textValue(error?.message) || `${name} 执行失败`;
 }
 
 export function buildFfmpegArgs(job) {

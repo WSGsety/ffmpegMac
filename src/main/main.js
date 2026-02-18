@@ -1,13 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
   buildFfmpegArgs,
+  formatSpawnError,
   formatCommandPreview,
   parseProgress,
   parseTimeInput,
+  resolveExecutablePath,
   suggestOutputPath
 } from '../core/job.js';
 
@@ -49,7 +52,7 @@ function createWindow() {
     minHeight: 720,
     title: 'FFmpeg 图形工具',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -63,7 +66,10 @@ function cleanupActiveTask() {
   activeTask = null;
 }
 
-function runCommand(binaryPath, args) {
+function runCommand(binaryPath, args, options = {}) {
+  const toolName = options.toolName === 'ffprobe' ? 'ffprobe' : 'ffmpeg';
+  const configuredPath = options.configuredPath || binaryPath;
+
   return new Promise((resolve, reject) => {
     const proc = spawn(binaryPath, args, {
       stdio: ['ignore', 'pipe', 'pipe']
@@ -81,7 +87,7 @@ function runCommand(binaryPath, args) {
     });
 
     proc.once('error', (error) => {
-      reject(error);
+      reject(new Error(formatSpawnError(error, toolName, configuredPath)));
     });
 
     proc.once('close', (code) => {
@@ -97,7 +103,10 @@ function runCommand(binaryPath, args) {
 
 async function probeMedia(ffprobePath, inputPath) {
   const args = ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', inputPath];
-  const result = await runCommand(ffprobePath, args);
+  const result = await runCommand(ffprobePath, args, {
+    toolName: 'ffprobe',
+    configuredPath: ffprobePath
+  });
 
   let parsed;
   try {
@@ -141,7 +150,9 @@ async function resolveDurationSec(payload) {
     return null;
   }
 
-  const ffprobePath = (payload?.ffprobePath || 'ffprobe').trim() || 'ffprobe';
+  const ffprobePath = resolveExecutablePath(payload?.ffprobePath || 'ffprobe', 'ffprobe', (candidate) => {
+    return fs.existsSync(candidate);
+  });
 
   try {
     const metadata = await probeMedia(ffprobePath, payload.inputPath);
@@ -152,32 +163,45 @@ async function resolveDurationSec(payload) {
 }
 
 ipcMain.handle('dialog:pick-input', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    title: '选择源媒体文件',
-    properties: ['openFile']
-  });
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '选择源媒体文件',
+      properties: ['openFile']
+    });
 
-  if (result.canceled || result.filePaths.length === 0) {
-    return null;
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths[0];
+  } catch (error) {
+    throw new Error(`打开输入文件选择器失败: ${error?.message || 'unknown error'}`);
   }
-
-  return result.filePaths[0];
 });
 
 ipcMain.handle('dialog:pick-output', async (_event, payload) => {
-  const inputPath = payload?.inputPath ?? '';
-  const preset = payload?.preset ?? 'h264';
+  try {
+    const inputPath = payload?.inputPath ?? '';
+    const preset = payload?.preset ?? 'h264';
+    const suggested = suggestOutputPath(inputPath, preset);
+    const options = {
+      title: '选择输出文件'
+    };
 
-  const result = await dialog.showSaveDialog(mainWindow, {
-    title: '选择输出文件',
-    defaultPath: suggestOutputPath(inputPath, preset)
-  });
+    if (suggested) {
+      options.defaultPath = suggested;
+    }
 
-  if (result.canceled) {
-    return null;
+    const result = await dialog.showSaveDialog(mainWindow, options);
+
+    if (result.canceled) {
+      return null;
+    }
+
+    return result.filePath ?? null;
+  } catch (error) {
+    throw new Error(`打开输出文件选择器失败: ${error?.message || 'unknown error'}`);
   }
-
-  return result.filePath ?? null;
 });
 
 ipcMain.handle('ffmpeg:suggest-output', async (_event, payload) => {
@@ -190,7 +214,9 @@ ipcMain.handle('ffmpeg:probe-input', async (_event, payload) => {
     throw new Error('缺少 inputPath 参数');
   }
 
-  const ffprobePath = (payload?.ffprobePath || 'ffprobe').trim() || 'ffprobe';
+  const ffprobePath = resolveExecutablePath(payload?.ffprobePath || 'ffprobe', 'ffprobe', (candidate) => {
+    return fs.existsSync(candidate);
+  });
   return probeMedia(ffprobePath, inputPath);
 });
 
@@ -214,7 +240,9 @@ ipcMain.handle('ffmpeg:run', async (_event, payload) => {
     throw new Error('当前已有任务在运行，请先停止后再启动新任务。');
   }
 
-  const ffmpegPath = (payload?.ffmpegPath || 'ffmpeg').trim() || 'ffmpeg';
+  const ffmpegPath = resolveExecutablePath(payload?.ffmpegPath || 'ffmpeg', 'ffmpeg', (candidate) => {
+    return fs.existsSync(candidate);
+  });
   const args = buildFfmpegArgs(payload ?? {});
   const durationSec = await resolveDurationSec(payload ?? {});
   const mode = payload?.mode === 'raw' ? 'raw' : payload?.mode === 'visual' ? 'visual' : 'preset';
@@ -236,7 +264,10 @@ ipcMain.handle('ffmpeg:run', async (_event, payload) => {
   };
 
   proc.once('error', (error) => {
-    sendState({ status: 'failed', message: error.message });
+    sendState({
+      status: 'failed',
+      message: formatSpawnError(error, 'ffmpeg', ffmpegPath)
+    });
     cleanupActiveTask();
   });
 

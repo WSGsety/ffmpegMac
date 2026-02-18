@@ -3,6 +3,8 @@ const els = {
   ffprobePath: document.querySelector('#ffprobePath'),
   inputPath: document.querySelector('#inputPath'),
   outputPath: document.querySelector('#outputPath'),
+  quickProfileGrid: document.querySelector('#quickProfileGrid'),
+  quickProfileHint: document.querySelector('#quickProfileHint'),
   preset: document.querySelector('#preset'),
   startTime: document.querySelector('#startTime'),
   duration: document.querySelector('#duration'),
@@ -41,10 +43,17 @@ const els = {
   status: document.querySelector('#status'),
   currentTime: document.querySelector('#currentTime'),
   logOutput: document.querySelector('#logOutput'),
-  probeInfo: document.querySelector('#probeInfo')
+  probeInfo: document.querySelector('#probeInfo'),
+  floatingStack: document.querySelector('#floatingStack'),
+  activityBanner: document.querySelector('#activityBanner'),
+  activityText: document.querySelector('#activityText')
 };
 
 let lastSuggestedOutput = '';
+let toastIdSeed = 0;
+let currentStateStatus = 'idle';
+let activeQuickProfile = '';
+let applyingQuickProfile = false;
 
 const PRESET_DEFAULTS = {
   h264: {
@@ -105,6 +114,61 @@ const PRESET_DEFAULTS = {
   }
 };
 
+const QUICK_PROFILES = {
+  social: {
+    label: '社媒竖屏',
+    hint: '已套用社媒竖屏：优先兼容与播放速度，可在模块里继续微调。',
+    preset: 'h264',
+    overrides: {
+      speedPreset: 'fast',
+      crf: '22',
+      width: '1080',
+      height: '1920',
+      fps: '30',
+      pixelFormat: 'yuv420p',
+      movflagsFaststart: true,
+      format: 'mp4',
+      audioBitrate: '160k',
+      disableVideo: false,
+      disableAudio: false
+    }
+  },
+  archive: {
+    label: '压缩归档',
+    hint: '已套用压缩归档：更高压缩比，适合存储与备份。',
+    preset: 'h265',
+    overrides: {
+      speedPreset: 'slow',
+      crf: '30',
+      width: '',
+      height: '',
+      fps: '',
+      pixelFormat: 'yuv420p',
+      movflagsFaststart: false,
+      format: 'mp4',
+      audioBitrate: '128k',
+      disableVideo: false,
+      disableAudio: false
+    }
+  },
+  audio: {
+    label: '只导出音频',
+    hint: '已套用音频提取：自动禁用视频轨并输出 MP3。',
+    preset: 'mp3',
+    overrides: {
+      format: 'mp3',
+      map: '',
+      width: '',
+      height: '',
+      fps: '',
+      pixelFormat: '',
+      disableVideo: true,
+      disableAudio: false,
+      movflagsFaststart: false
+    }
+  }
+};
+
 function textValue(value) {
   return String(value ?? '').trim();
 }
@@ -147,6 +211,70 @@ function setStatus(text, kind = 'idle') {
 function setPreviewStatus(text, kind = 'idle') {
   els.previewStatus.textContent = text;
   els.previewStatus.className = `preview-status ${kind}`;
+}
+
+function showActivity(text) {
+  if (!els.activityBanner || !els.activityText) {
+    return;
+  }
+
+  els.activityText.textContent = text;
+  els.activityBanner.classList.add('active');
+}
+
+function hideActivity() {
+  if (!els.activityBanner) {
+    return;
+  }
+
+  els.activityBanner.classList.remove('active');
+}
+
+function removeToast(node) {
+  if (!(node instanceof HTMLElement) || !node.parentNode) {
+    return;
+  }
+
+  node.classList.add('is-closing');
+  setTimeout(() => {
+    if (node.parentNode) {
+      node.parentNode.removeChild(node);
+    }
+  }, 180);
+}
+
+function showToast(message, kind = 'info', options = {}) {
+  if (!els.floatingStack) {
+    return;
+  }
+
+  const text = textValue(message);
+  if (!text) {
+    return;
+  }
+
+  const toast = document.createElement('article');
+  toast.className = `toast ${kind}`;
+  toast.dataset.toastId = String(++toastIdSeed);
+
+  const title = document.createElement('div');
+  title.className = 'toast-title';
+  title.textContent =
+    options.title || (kind === 'error' ? '错误' : kind === 'success' ? '完成' : kind === 'warn' ? '注意' : '提示');
+
+  const body = document.createElement('div');
+  body.className = 'toast-message';
+  body.textContent = text;
+
+  toast.append(title, body);
+  els.floatingStack.append(toast);
+
+  const duration = Number.isFinite(options.duration) ? Number(options.duration) : kind === 'error' ? 5600 : 2600;
+  if (duration > 0) {
+    setTimeout(() => {
+      removeToast(toast);
+    }, duration);
+  }
 }
 
 function formatSeconds(value) {
@@ -362,6 +490,75 @@ function applyPresetDefaults(preset) {
   els.loop.value = defaults.loop;
 }
 
+function applyFieldOverrides(overrides = {}) {
+  for (const [fieldKey, fieldValue] of Object.entries(overrides)) {
+    const field = els[fieldKey];
+    if (!field) {
+      continue;
+    }
+
+    if (field instanceof HTMLInputElement && field.type === 'checkbox') {
+      field.checked = Boolean(fieldValue);
+      continue;
+    }
+
+    field.value = textValue(fieldValue);
+  }
+}
+
+function setQuickProfileState(profileKey = '') {
+  activeQuickProfile = QUICK_PROFILES[profileKey] ? profileKey : '';
+
+  if (els.quickProfileGrid) {
+    const cards = Array.from(els.quickProfileGrid.querySelectorAll('.quick-profile-card'));
+    for (const card of cards) {
+      const key = card.getAttribute('data-profile') || '';
+      card.classList.toggle('active', key === activeQuickProfile);
+      card.setAttribute('aria-pressed', key === activeQuickProfile ? 'true' : 'false');
+    }
+  }
+
+  if (!els.quickProfileHint) {
+    return;
+  }
+
+  if (!activeQuickProfile) {
+    els.quickProfileHint.textContent = '未套用快速场景，当前按模板默认值。';
+    return;
+  }
+
+  els.quickProfileHint.textContent = QUICK_PROFILES[activeQuickProfile].hint;
+}
+
+function clearQuickProfileFromManualInput() {
+  if (applyingQuickProfile || !activeQuickProfile) {
+    return;
+  }
+
+  setQuickProfileState('');
+}
+
+async function applyQuickProfile(profileKey) {
+  const profile = QUICK_PROFILES[profileKey];
+  if (!profile) {
+    return;
+  }
+
+  applyingQuickProfile = true;
+
+  try {
+    els.preset.value = profile.preset;
+    applyPresetDefaults(profile.preset);
+    applyFieldOverrides(profile.overrides);
+    setQuickProfileState(profileKey);
+    await refreshSuggestedOutput();
+    scheduleCommandPreview();
+    showToast(`已套用“${profile.label}”默认参数。`, 'success', { title: '快速场景' });
+  } finally {
+    applyingQuickProfile = false;
+  }
+}
+
 async function refreshCommandPreview() {
   const payload = buildPayload();
 
@@ -379,6 +576,23 @@ async function refreshCommandPreview() {
 const scheduleCommandPreview = debounce(() => {
   refreshCommandPreview();
 }, 180);
+
+if (els.quickProfileGrid) {
+  els.quickProfileGrid.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const card = target.closest('[data-profile]');
+    if (!(card instanceof HTMLElement)) {
+      return;
+    }
+
+    const profileKey = card.getAttribute('data-profile') || '';
+    await applyQuickProfile(profileKey);
+  });
+}
 
 els.addExtraArg.addEventListener('click', () => {
   els.extraArgsRows.append(createExtraArgRow());
@@ -438,11 +652,18 @@ const watchedInputs = [
 ];
 
 for (const input of watchedInputs) {
-  input.addEventListener('input', scheduleCommandPreview);
-  input.addEventListener('change', scheduleCommandPreview);
+  input.addEventListener('input', () => {
+    clearQuickProfileFromManualInput();
+    scheduleCommandPreview();
+  });
+  input.addEventListener('change', () => {
+    clearQuickProfileFromManualInput();
+    scheduleCommandPreview();
+  });
 }
 
 els.preset.addEventListener('change', async () => {
+  clearQuickProfileFromManualInput();
   applyPresetDefaults(els.preset.value);
   await refreshSuggestedOutput();
   scheduleCommandPreview();
@@ -454,35 +675,53 @@ els.inputPath.addEventListener('change', async () => {
 });
 
 els.pickInput.addEventListener('click', async () => {
-  const chosen = await window.ffmpegShell.pickInput();
-  if (!chosen) {
-    return;
-  }
+  try {
+    const chosen = await window.ffmpegShell.pickInput();
+    if (!chosen) {
+      return;
+    }
 
-  els.inputPath.value = chosen;
-  await refreshSuggestedOutput();
-  scheduleCommandPreview();
+    els.inputPath.value = chosen;
+    await refreshSuggestedOutput();
+    scheduleCommandPreview();
+    showToast('输入文件已选择。', 'success', { title: '输入文件' });
+  } catch (error) {
+    const message = error?.message || '打开输入文件选择器失败';
+    setStatus(message, 'failed');
+    showToast(message, 'error', { title: '输入文件' });
+  }
 });
 
 els.pickOutput.addEventListener('click', async () => {
-  const chosen = await window.ffmpegShell.pickOutput({
-    inputPath: textValue(els.inputPath.value),
-    preset: els.preset.value
-  });
+  try {
+    const chosen = await window.ffmpegShell.pickOutput({
+      inputPath: textValue(els.inputPath.value),
+      preset: els.preset.value
+    });
 
-  if (chosen) {
-    els.outputPath.value = chosen;
-    scheduleCommandPreview();
+    if (chosen) {
+      els.outputPath.value = chosen;
+      scheduleCommandPreview();
+      showToast('输出文件路径已更新。', 'success', { title: '输出文件' });
+    }
+  } catch (error) {
+    const message = error?.message || '打开输出文件选择器失败';
+    setStatus(message, 'failed');
+    showToast(message, 'error', { title: '输出文件' });
   }
 });
 
 els.probeInput.addEventListener('click', async () => {
   if (!textValue(els.inputPath.value)) {
-    setStatus('请先选择输入文件再探测', 'failed');
+    const message = '请先选择输入文件再探测';
+    setStatus(message, 'failed');
+    showToast(message, 'warn', { title: '媒体探测' });
     return;
   }
 
   setStatus('正在探测输入文件...', 'running');
+  showActivity('正在探测媒体信息...');
+  showToast('正在探测输入媒体，请稍候。', 'info', { title: '媒体探测', duration: 1800 });
 
   try {
     const info = await window.ffmpegShell.probeInput({
@@ -491,9 +730,14 @@ els.probeInput.addEventListener('click', async () => {
     });
 
     els.probeInfo.textContent = renderProbeInfo(info);
-    setStatus('探测完成', 'idle');
+    setStatus('探测完成', 'completed');
+    showToast('探测完成，媒体信息已更新。', 'success', { title: '媒体探测' });
   } catch (error) {
-    setStatus(error.message || '探测失败', 'failed');
+    const message = error?.message || '探测失败';
+    setStatus(message, 'failed');
+    showToast(message, 'error', { title: '媒体探测', duration: 6400 });
+  } finally {
+    hideActivity();
   }
 });
 
@@ -503,7 +747,9 @@ els.runJob.addEventListener('click', async () => {
   try {
     validatePayload(payload);
   } catch (error) {
-    setStatus(error.message || '参数配置无效', 'failed');
+    const message = error?.message || '参数配置无效';
+    setStatus(message, 'failed');
+    showToast(message, 'warn', { title: '参数校验' });
     return;
   }
 
@@ -513,17 +759,26 @@ els.runJob.addEventListener('click', async () => {
   try {
     await window.ffmpegShell.run(payload);
   } catch (error) {
-    setStatus(error.message || '无法启动 ffmpeg', 'failed');
+    const message = error?.message || '无法启动 ffmpeg';
+    setStatus(message, 'failed');
+    hideActivity();
+    showToast(message, 'error', { title: '任务启动', duration: 6400 });
   }
 });
 
 els.stopJob.addEventListener('click', async () => {
   await window.ffmpegShell.stop();
+  showToast('已发送停止请求。', 'info', { title: '任务控制' });
 });
 
 window.ffmpegShell.onState((state) => {
   if (state.status === 'running') {
     setBusy(true);
+    if (currentStateStatus !== 'running') {
+      showActivity('FFmpeg 正在执行，请稍候...');
+      showToast('任务已启动，正在执行中。', 'info', { title: '任务状态', duration: 1800 });
+    }
+    currentStateStatus = 'running';
 
     if (state.mode === 'visual') {
       setStatus('运行中（可视化配置）', 'running');
@@ -539,23 +794,35 @@ window.ffmpegShell.onState((state) => {
 
   if (state.status === 'completed') {
     setBusy(false);
+    hideActivity();
+    currentStateStatus = 'completed';
     setStatus('已完成', 'completed');
+    showToast('转码任务已完成。', 'success', { title: '任务状态' });
     return;
   }
 
   if (state.status === 'stopped') {
     setBusy(false);
+    hideActivity();
+    currentStateStatus = 'stopped';
     setStatus('已停止', 'stopped');
+    showToast('任务已停止。', 'warn', { title: '任务状态' });
     return;
   }
 
   if (state.status === 'failed') {
     setBusy(false);
-    setStatus(state.message ? `失败: ${state.message}` : '失败', 'failed');
+    hideActivity();
+    currentStateStatus = 'failed';
+    const message = state.message ? `失败: ${state.message}` : '失败';
+    setStatus(message, 'failed');
+    showToast(message, 'error', { title: '任务状态', duration: 6800 });
     return;
   }
 
   setBusy(false);
+  hideActivity();
+  currentStateStatus = 'idle';
   setStatus('空闲', 'idle');
 });
 
@@ -576,6 +843,7 @@ window.ffmpegShell.onLog((line) => {
 
 els.extraArgsRows.append(createExtraArgRow());
 applyPresetDefaults(els.preset.value);
+setQuickProfileState('');
 resetProgress();
 setBusy(false);
 setStatus('空闲', 'idle');

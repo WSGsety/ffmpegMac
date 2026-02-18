@@ -16,19 +16,42 @@
       </header>
 
       <section class="panel reveal delay-1">
-        <h2>基础设置</h2>
+        <h2>基础流程设置</h2>
+        <p class="hint workflow-hint">按常见剪辑流程：先选场景，再选素材与时间，最后直接执行。</p>
 
-        <div class="grid-2">
-          <label class="field">
-            <span>FFmpeg 可执行文件</span>
-            <input id="ffmpegPath" type="text" value="ffmpeg" placeholder="/opt/homebrew/bin/ffmpeg" />
-          </label>
-
-          <label class="field">
-            <span>FFprobe 可执行文件</span>
-            <input id="ffprobePath" type="text" value="ffprobe" placeholder="/opt/homebrew/bin/ffprobe" />
-          </label>
+        <div class="workflow-strip" aria-hidden="true">
+          <span class="workflow-step">1. 选择常用场景</span>
+          <span class="workflow-step">2. 输入与输出</span>
+          <span class="workflow-step">3. 裁切时间</span>
+          <span class="workflow-step">4. 开始执行</span>
         </div>
+
+        <section class="quick-profile-block" aria-label="常用默认设置">
+          <div class="quick-head">
+            <span>常用默认设置（一键套用）</span>
+            <p id="quickProfileHint" class="quick-profile-hint">未套用快速场景，当前按模板默认值。</p>
+          </div>
+
+          <div id="quickProfileGrid" class="quick-profile-grid" role="group" aria-label="快速场景">
+            <button class="quick-profile-card" type="button" data-profile="social">
+              <span class="quick-profile-title">社媒竖屏</span>
+              <span class="quick-profile-meta">H.264 · 1080x1920 · 30fps</span>
+              <span class="quick-profile-note">优先兼容与首屏播放速度。</span>
+            </button>
+
+            <button class="quick-profile-card" type="button" data-profile="archive">
+              <span class="quick-profile-title">压缩归档</span>
+              <span class="quick-profile-meta">H.265 · 高压缩 · 保留音频</span>
+              <span class="quick-profile-note">适合存档或长期保存素材。</span>
+            </button>
+
+            <button class="quick-profile-card" type="button" data-profile="audio">
+              <span class="quick-profile-title">只导出音频</span>
+              <span class="quick-profile-meta">MP3 · 自动禁用视频轨</span>
+              <span class="quick-profile-note">快速做播客、语音备份。</span>
+            </button>
+          </div>
+        </section>
 
         <div class="field-group">
           <label class="field field-grow">
@@ -76,6 +99,23 @@
           </label>
         </div>
 
+        <details class="setting-group env-group">
+          <summary>环境与工具路径（可选）</summary>
+          <div class="setting-group-body">
+            <div class="grid-2">
+              <label class="field">
+                <span>FFmpeg 可执行文件</span>
+                <input id="ffmpegPath" type="text" value="ffmpeg" placeholder="/opt/homebrew/bin/ffmpeg" />
+              </label>
+
+              <label class="field">
+                <span>FFprobe 可执行文件</span>
+                <input id="ffprobePath" type="text" value="ffprobe" placeholder="/opt/homebrew/bin/ffprobe" />
+              </label>
+            </div>
+          </div>
+        </details>
+
         <details class="probe-box">
           <summary>媒体探测信息</summary>
           <pre id="probeInfo">暂无探测数据。</pre>
@@ -83,12 +123,12 @@
       </section>
 
       <section class="panel reveal delay-2">
-        <h2>高级设置</h2>
-        <p class="hint">留空表示不传该参数。可按需覆盖模板默认值。</p>
+        <h2>模块高级设置</h2>
+        <p class="hint">留空表示不传该参数。需要更细控制时，只展开对应模块调整。</p>
 
         <div class="setting-groups">
           <details class="setting-group" open>
-            <summary>编码策略</summary>
+            <summary>视频模块</summary>
             <div class="setting-group-body">
               <div class="grid-3">
                 <label class="field">
@@ -100,17 +140,6 @@
                     <option value="libvpx-vp9">libvpx-vp9</option>
                     <option value="copy">copy</option>
                     <option value="none">禁用视频</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>音频编码器（可选）</span>
-                  <select id="audioCodec">
-                    <option value="">自动</option>
-                    <option value="aac">aac</option>
-                    <option value="libmp3lame">libmp3lame</option>
-                    <option value="copy">copy</option>
-                    <option value="none">禁用音频</option>
                   </select>
                 </label>
 
@@ -129,43 +158,31 @@
                     <option value="veryslow">veryslow</option>
                   </select>
                 </label>
-              </div>
 
-              <div class="grid-3">
                 <label class="field">
                   <span>CRF（可选）</span>
                   <input id="crf" type="number" min="0" max="51" step="1" placeholder="例如 23" />
                 </label>
+              </div>
 
+              <div class="grid-3">
                 <label class="field">
                   <span>视频码率（可选）</span>
                   <input id="videoBitrate" type="text" placeholder="例如 2M" />
                 </label>
 
                 <label class="field">
-                  <span>音频码率（可选）</span>
-                  <input id="audioBitrate" type="text" placeholder="例如 192k" />
-                </label>
-              </div>
-
-              <div class="grid-3">
-                <label class="field">
-                  <span>音频质量 Q（可选）</span>
-                  <input id="audioQuality" type="text" placeholder="例如 2" />
-                </label>
-              </div>
-            </div>
-          </details>
-
-          <details class="setting-group" open>
-            <summary>画面与音频处理</summary>
-            <div class="setting-group-body">
-              <div class="grid-3">
-                <label class="field">
                   <span>帧率 FPS（可选）</span>
                   <input id="fps" type="number" min="1" max="240" step="1" placeholder="例如 24" />
                 </label>
 
+                <label class="field">
+                  <span>像素格式（可选）</span>
+                  <input id="pixelFormat" type="text" placeholder="例如 yuv420p" />
+                </label>
+              </div>
+
+              <div class="grid-3">
                 <label class="field">
                   <span>缩放宽度（可选）</span>
                   <input id="width" type="number" min="1" step="1" placeholder="例如 1280" />
@@ -175,22 +192,10 @@
                   <span>缩放高度（可选）</span>
                   <input id="height" type="number" min="1" step="1" placeholder="例如 720" />
                 </label>
-              </div>
 
-              <div class="grid-3">
-                <label class="field">
-                  <span>像素格式（可选）</span>
-                  <input id="pixelFormat" type="text" placeholder="例如 yuv420p" />
-                </label>
-
-                <label class="field">
-                  <span>采样率（可选）</span>
-                  <input id="sampleRate" type="number" min="8000" step="1" placeholder="例如 44100" />
-                </label>
-
-                <label class="field">
-                  <span>声道数（可选）</span>
-                  <input id="channels" type="number" min="1" max="8" step="1" placeholder="例如 2" />
+                <label class="field checkbox-field">
+                  <input id="disableVideo" type="checkbox" />
+                  <span>强制禁用视频（-vn）</span>
                 </label>
               </div>
 
@@ -202,7 +207,52 @@
           </details>
 
           <details class="setting-group" open>
-            <summary>封装与执行控制</summary>
+            <summary>音频模块</summary>
+            <div class="setting-group-body">
+              <div class="grid-3">
+                <label class="field">
+                  <span>音频编码器（可选）</span>
+                  <select id="audioCodec">
+                    <option value="">自动</option>
+                    <option value="aac">aac</option>
+                    <option value="libmp3lame">libmp3lame</option>
+                    <option value="copy">copy</option>
+                    <option value="none">禁用音频</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>音频码率（可选）</span>
+                  <input id="audioBitrate" type="text" placeholder="例如 192k" />
+                </label>
+
+                <label class="field">
+                  <span>音频质量 Q（可选）</span>
+                  <input id="audioQuality" type="text" placeholder="例如 2" />
+                </label>
+              </div>
+
+              <div class="grid-3">
+                <label class="field">
+                  <span>采样率（可选）</span>
+                  <input id="sampleRate" type="number" min="8000" step="1" placeholder="例如 44100" />
+                </label>
+
+                <label class="field">
+                  <span>声道数（可选）</span>
+                  <input id="channels" type="number" min="1" max="8" step="1" placeholder="例如 2" />
+                </label>
+
+                <label class="field checkbox-field">
+                  <input id="disableAudio" type="checkbox" />
+                  <span>强制禁用音频（-an）</span>
+                </label>
+              </div>
+            </div>
+          </details>
+
+          <details class="setting-group" open>
+            <summary>封装与执行模块</summary>
             <div class="setting-group-body">
               <div class="grid-3">
                 <label class="field">
@@ -230,16 +280,6 @@
                 <label class="field checkbox-field">
                   <input id="movflagsFaststart" type="checkbox" />
                   <span>启用 +faststart</span>
-                </label>
-
-                <label class="field checkbox-field">
-                  <input id="disableVideo" type="checkbox" />
-                  <span>强制禁用视频（-vn）</span>
-                </label>
-
-                <label class="field checkbox-field">
-                  <input id="disableAudio" type="checkbox" />
-                  <span>强制禁用音频（-an）</span>
                 </label>
               </div>
 
@@ -288,6 +328,13 @@
         <pre id="logOutput" aria-live="polite"></pre>
       </section>
     </main>
+
+    <div id="activityBanner" class="activity-banner" aria-live="polite" role="status">
+      <span class="activity-spinner" aria-hidden="true"></span>
+      <span id="activityText"></span>
+    </div>
+
+    <div id="floatingStack" class="floating-stack" aria-live="polite" aria-atomic="false"></div>
 
     <script type="module" src="./renderer.js"></script>
   </body>
