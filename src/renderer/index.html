@@ -11,12 +11,12 @@
     <main class="shell">
       <header class="hero reveal">
         <p class="tag">macOS 图形封装</p>
-        <h1>FFmpeg 控制面板</h1>
-        <p class="subtitle">预设模式用于快速操作，原生命令模式覆盖 FFmpeg 全部参数能力。</p>
+        <h1>FFmpeg 可视化控制台</h1>
+        <p class="subtitle">全部参数通过可选项配置，基础设置面向常用任务，高级设置覆盖深度转码需求。</p>
       </header>
 
       <section class="panel reveal delay-1">
-        <h2>任务设置</h2>
+        <h2>基础设置</h2>
 
         <div class="grid-2">
           <label class="field">
@@ -30,17 +30,9 @@
           </label>
         </div>
 
-        <label class="field">
-          <span>模式</span>
-          <select id="mode">
-            <option value="preset">预设模式（快速操作）</option>
-            <option value="raw">原生命令模式（全部 FFmpeg 参数）</option>
-          </select>
-        </label>
-
         <div class="field-group">
           <label class="field field-grow">
-            <span>输入文件（原生命令模式可选）</span>
+            <span>输入文件</span>
             <input id="inputPath" type="text" placeholder="请选择源媒体文件" />
           </label>
           <button id="pickInput" class="btn btn-secondary" type="button">选择</button>
@@ -49,26 +41,21 @@
 
         <div class="field-group">
           <label class="field field-grow">
-            <span>输出文件（原生命令模式可选）</span>
+            <span>输出文件</span>
             <input id="outputPath" type="text" placeholder="请选择输出路径" />
           </label>
           <button id="pickOutput" class="btn btn-secondary" type="button">浏览</button>
         </div>
 
-        <div id="presetFields" class="grid-2 mode-block">
+        <div class="grid-3">
           <label class="field">
-            <span>预设</span>
+            <span>转码模板</span>
             <select id="preset">
               <option value="h264">H.264 MP4（均衡）</option>
               <option value="h265">H.265 MP4（更小体积）</option>
               <option value="mp3">提取 MP3 音频</option>
               <option value="gif">转为 GIF</option>
             </select>
-          </label>
-
-          <label class="field" id="crfField">
-            <span>CRF（视频质量）</span>
-            <input id="crf" type="number" min="0" max="51" step="1" value="23" />
           </label>
 
           <label class="field">
@@ -80,40 +67,33 @@
             <span>时长（可选）</span>
             <input id="duration" type="text" placeholder="15 或 00:00:15" />
           </label>
-
-          <label class="field" id="gifFpsField">
-            <span>GIF 帧率</span>
-            <input id="fps" type="number" min="1" max="30" value="12" />
-          </label>
-
-          <label class="field" id="gifWidthField">
-            <span>GIF 宽度</span>
-            <input id="width" type="number" min="120" max="1920" value="480" />
-          </label>
         </div>
 
-        <div id="rawFields" class="mode-block hidden">
+        <div class="grid-3">
           <label class="field">
-            <span>原生命令参数</span>
-            <textarea
-              id="rawArgs"
-              rows="5"
-              placeholder='示例： -y -i {input} -map 0:v -c:v libx264 -crf 23 -c:a aac {output}'
-            ></textarea>
+            <span>CRF（可选）</span>
+            <input id="crf" type="number" min="0" max="51" step="1" placeholder="例如 23" />
           </label>
 
-          <p class="hint">使用占位符： <code>{input}</code>, <code>{output}</code>. 也可以不使用占位符，直接输入完整命令参数。</p>
-
-          <div class="template-row">
-            <button class="chip" type="button" data-template="-y -i {input} -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k {output}">H.264</button>
-            <button class="chip" type="button" data-template="-y -i {input} -c:v libx265 -preset medium -crf 28 -c:a aac -b:a 160k {output}">H.265</button>
-            <button class="chip" type="button" data-template="-y -i {input} -vn -c:a libmp3lame -q:a 2 {output}">提取 MP3</button>
-            <button class="chip" type="button" data-template="-y -i {input} -map 0:v:0 -c:v copy -an {output}">视频直拷贝</button>
-          </div>
-
           <label class="field">
-            <span>时长提示（可选，用于进度比例）</span>
-            <input id="durationHint" type="text" placeholder="例如 120 或 00:02:00" />
+            <span>编码速度（可选）</span>
+            <select id="speedPreset">
+              <option value="">自动</option>
+              <option value="ultrafast">ultrafast</option>
+              <option value="superfast">superfast</option>
+              <option value="veryfast">veryfast</option>
+              <option value="faster">faster</option>
+              <option value="fast">fast</option>
+              <option value="medium">medium</option>
+              <option value="slow">slow</option>
+              <option value="slower">slower</option>
+              <option value="veryslow">veryslow</option>
+            </select>
+          </label>
+
+          <label class="field checkbox-field">
+            <input id="overwrite" type="checkbox" checked />
+            <span>覆盖输出文件（-y）</span>
           </label>
         </div>
 
@@ -121,6 +101,145 @@
           <summary>媒体探测信息</summary>
           <pre id="probeInfo">暂无探测数据。</pre>
         </details>
+      </section>
+
+      <section class="panel reveal delay-2">
+        <h2>高级设置</h2>
+        <p class="hint">留空表示不传该参数。可按需覆盖模板默认值。</p>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>视频编码器（可选）</span>
+            <select id="videoCodec">
+              <option value="">自动</option>
+              <option value="libx264">libx264</option>
+              <option value="libx265">libx265</option>
+              <option value="libvpx-vp9">libvpx-vp9</option>
+              <option value="copy">copy</option>
+              <option value="none">禁用视频</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>音频编码器（可选）</span>
+            <select id="audioCodec">
+              <option value="">自动</option>
+              <option value="aac">aac</option>
+              <option value="libmp3lame">libmp3lame</option>
+              <option value="copy">copy</option>
+              <option value="none">禁用音频</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>像素格式（可选）</span>
+            <input id="pixelFormat" type="text" placeholder="例如 yuv420p" />
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>视频码率（可选）</span>
+            <input id="videoBitrate" type="text" placeholder="例如 2M" />
+          </label>
+
+          <label class="field">
+            <span>音频码率（可选）</span>
+            <input id="audioBitrate" type="text" placeholder="例如 192k" />
+          </label>
+
+          <label class="field">
+            <span>音频质量 Q（可选）</span>
+            <input id="audioQuality" type="text" placeholder="例如 2" />
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>帧率 FPS（可选）</span>
+            <input id="fps" type="number" min="1" max="240" step="1" placeholder="例如 24" />
+          </label>
+
+          <label class="field">
+            <span>缩放宽度（可选）</span>
+            <input id="width" type="number" min="1" step="1" placeholder="例如 1280" />
+          </label>
+
+          <label class="field">
+            <span>缩放高度（可选）</span>
+            <input id="height" type="number" min="1" step="1" placeholder="例如 720" />
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>采样率（可选）</span>
+            <input id="sampleRate" type="number" min="8000" step="1" placeholder="例如 44100" />
+          </label>
+
+          <label class="field">
+            <span>声道数（可选）</span>
+            <input id="channels" type="number" min="1" max="8" step="1" placeholder="例如 2" />
+          </label>
+
+          <label class="field">
+            <span>线程数（可选）</span>
+            <input id="threads" type="number" min="1" max="64" step="1" placeholder="例如 4" />
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label class="field">
+            <span>输出格式（可选）</span>
+            <input id="format" type="text" placeholder="例如 mp4 / webm" />
+          </label>
+
+          <label class="field">
+            <span>流映射（可选）</span>
+            <input id="map" type="text" placeholder="例如 0:v:0" />
+          </label>
+
+          <label class="field">
+            <span>循环参数（可选）</span>
+            <input id="loop" type="text" placeholder="例如 0（GIF 无限循环）" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>附加视频滤镜（可选）</span>
+          <input id="videoFilter" type="text" placeholder="例如 eq=contrast=1.1:saturation=1.2" />
+        </label>
+
+        <div class="grid-3 compact-checkboxes">
+          <label class="field checkbox-field">
+            <input id="movflagsFaststart" type="checkbox" />
+            <span>启用 +faststart</span>
+          </label>
+
+          <label class="field checkbox-field">
+            <input id="disableVideo" type="checkbox" />
+            <span>强制禁用视频（-vn）</span>
+          </label>
+
+          <label class="field checkbox-field">
+            <input id="disableAudio" type="checkbox" />
+            <span>强制禁用音频（-an）</span>
+          </label>
+        </div>
+
+        <div class="extra-args" aria-label="extra-args">
+          <div class="extra-head">
+            <span>额外参数（可视化添加）</span>
+            <button id="addExtraArg" class="btn btn-ghost" type="button">添加参数</button>
+          </div>
+          <div id="extraArgsRows" class="extra-rows"></div>
+        </div>
+      </section>
+
+      <section class="panel reveal delay-3">
+        <h2>命令预览</h2>
+        <p id="previewStatus" class="preview-status">参数变化后自动刷新。</p>
+        <pre id="commandPreview" class="command-preview">ffmpeg ...</pre>
 
         <div class="actions">
           <button id="runJob" class="btn btn-primary" type="button">开始执行</button>
@@ -128,7 +247,7 @@
         </div>
       </section>
 
-      <section class="panel reveal delay-2">
+      <section class="panel reveal delay-4">
         <h2>实时进度</h2>
         <div class="status-row">
           <span class="status-label">状态</span>
@@ -145,7 +264,7 @@
         </div>
       </section>
 
-      <section class="panel logs reveal delay-3">
+      <section class="panel logs reveal delay-5">
         <h2>FFmpeg 日志</h2>
         <pre id="logOutput" aria-live="polite"></pre>
       </section>

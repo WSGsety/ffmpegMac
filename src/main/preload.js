@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('ffmpegShell', {
   pickOutput: (payload) => ipcRenderer.invoke('dialog:pick-output', payload),
   suggestOutput: (payload) => ipcRenderer.invoke('ffmpeg:suggest-output', payload),
   probeInput: (payload) => ipcRenderer.invoke('ffmpeg:probe-input', payload),
+  preview: (payload) => ipcRenderer.invoke('ffmpeg:preview', payload),
   run: (payload) => ipcRenderer.invoke('ffmpeg:run', payload),
   stop: () => ipcRenderer.invoke('ffmpeg:stop'),
   onState: (callback) => {

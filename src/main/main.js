@@ -3,7 +3,13 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildFfmpegArgs, parseProgress, parseTimeInput, suggestOutputPath } from '../core/job.js';
+import {
+  buildFfmpegArgs,
+  formatCommandPreview,
+  parseProgress,
+  parseTimeInput,
+  suggestOutputPath
+} from '../core/job.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -188,6 +194,21 @@ ipcMain.handle('ffmpeg:probe-input', async (_event, payload) => {
   return probeMedia(ffprobePath, inputPath);
 });
 
+ipcMain.handle('ffmpeg:preview', async (_event, payload) => {
+  const ffmpegPath = (payload?.ffmpegPath || 'ffmpeg').trim() || 'ffmpeg';
+  const previewPayload = {
+    ...(payload ?? {}),
+    inputPath: payload?.inputPath?.trim() || '{input}',
+    outputPath: payload?.outputPath?.trim() || '{output}'
+  };
+  const args = buildFfmpegArgs(previewPayload);
+
+  return {
+    args,
+    command: formatCommandPreview(ffmpegPath, args)
+  };
+});
+
 ipcMain.handle('ffmpeg:run', async (_event, payload) => {
   if (activeTask) {
     throw new Error('当前已有任务在运行，请先停止后再启动新任务。');
@@ -196,11 +217,12 @@ ipcMain.handle('ffmpeg:run', async (_event, payload) => {
   const ffmpegPath = (payload?.ffmpegPath || 'ffmpeg').trim() || 'ffmpeg';
   const args = buildFfmpegArgs(payload ?? {});
   const durationSec = await resolveDurationSec(payload ?? {});
+  const mode = payload?.mode === 'raw' ? 'raw' : payload?.mode === 'visual' ? 'visual' : 'preset';
 
   sendState({
     status: 'running',
-    mode: payload?.mode === 'raw' ? 'raw' : 'preset',
-    args: [ffmpegPath, ...args].join(' ')
+    mode,
+    args: formatCommandPreview(ffmpegPath, args)
   });
 
   const proc = spawn(ffmpegPath, args, {
