@@ -18,7 +18,7 @@ jobs:
         include:
           - os: macos-latest
             name: macos
-            args: "--bundles app"
+            args: "--target universal-apple-darwin --bundles app"
             artifact_paths: |
               release/*.dmg
               release/*.zip
@@ -49,6 +49,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install macOS targets for universal build
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-22.04'
         run: |
@@ -76,22 +80,30 @@ jobs:
       - name: Build Tauri bundles
         run: npm run build -- ${{ matrix.args }}
 
-      - name: Build simple DMG from .app
+      - name: Ad-hoc sign macOS app
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          APP_PATH="src-tauri/target/universal-apple-darwin/release/bundle/macos/FFmpeg GUI Tool.app"
+          codesign --force --deep --sign - "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+      - name: Build macOS DMG and ZIP from .app
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          APP_PATH="src-tauri/target/release/bundle/macos/FFmpeg GUI Tool.app"
+          APP_PATH="src-tauri/target/universal-apple-darwin/release/bundle/macos/FFmpeg GUI Tool.app"
           mkdir -p release
           hdiutil create \
             -volname "FFmpeg GUI Tool" \
             -srcfolder "$APP_PATH" \
             -ov \
             -format UDZO \
-            "release/FFmpeg_GUI_Tool_${VERSION}_aarch64.dmg"
+            "release/FFmpeg_GUI_Tool_${VERSION}_universal.dmg"
           ditto -c -k --sequesterRsrc --keepParent \
             "$APP_PATH" \
-            "release/FFmpeg_GUI_Tool_${VERSION}_aarch64.zip"
+            "release/FFmpeg_GUI_Tool_${VERSION}_universal.zip"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
