@@ -77,11 +77,11 @@ npm test
 - `.github/workflows/release.yml`
 
 触发方式：
-- 在 GitHub 创建并发布 Release（`published`）
+- 推送版本标签（例如 `v1.1.0`）
 
 工作流会自动：
-- 在 macOS / Windows / Linux 三个平台构建 Tauri 安装包
-- 将构建产物上传到当前 Release
+- 先在 macOS / Windows / Linux 三个平台构建 Tauri 安装包
+- 仅当全部构建成功后，才创建/更新对应 tag 的 GitHub Release 并上传产物
 
 说明：
 - Release 页面自带源码压缩包（Source code zip/tar.gz）
