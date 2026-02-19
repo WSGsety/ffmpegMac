@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node ./scripts/run-tauri.mjs dev",
-    "build": "node ./scripts/run-tauri.mjs build --bundles app",
-    "dist": "node ./scripts/run-tauri.mjs build --bundles app",
+    "build": "node ./scripts/run-tauri.mjs build",
+    "dist": "node ./scripts/run-tauri.mjs build",
     "dist:mac": "bash ./scripts/build-macos-bundles.sh",
     "dist:mac:app": "node ./scripts/run-tauri.mjs build --bundles app",
     "dist:mac:dir": "node ./scripts/run-tauri.mjs build --bundles app",
