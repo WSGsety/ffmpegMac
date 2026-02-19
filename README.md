@@ -49,10 +49,12 @@ npm run dist:mac
 
 - `FFmpeg_GUI_Tool_<version>_<arch>.dmg`
 - `FFmpeg_GUI_Tool_<version>_<arch>.zip`
+- `FFmpeg_GUI_Tool_<version>_<arch>.pkg`
 
 `dist:mac` 内部流程是：
 1. 先用 Tauri 生成 `.app`
-2. 再用 `hdiutil` 生成简化版 `.dmg`
+2. 生成带 `Applications` 快捷方式的 `.dmg`
+3. 生成可双击安装的 `.pkg`
 
 ### 通用构建（当前系统）
 
@@ -115,6 +117,7 @@ GitHub CI 产物默认未做 Apple 开发者证书签名和公证，首次打开
 
 - 在 Finder 里右键应用，选择“打开”
 - 或在“系统设置 -> 隐私与安全性”中允许后再次打开
+- 若希望向导式安装，请使用同版本 `.pkg`
 
 ## 项目结构
 
@@ -132,7 +135,7 @@ src-tauri/
 .github/workflows/
   release.yml             # GitHub Release 三平台自动构建
 scripts/
-  build-macos-bundles.sh  # 本地 macOS app/dmg/zip 打包脚本
+  build-macos-bundles.sh  # 本地 macOS app/dmg/zip/pkg 打包脚本
 test/
   *.test.js               # Node 测试
 ```
